@@ -1,7 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
-const path = require('path');
+const admin = require('firebase-admin');
 require('dotenv').config(); // Nạp biến môi trường từ file .env
 
 const app = express();
@@ -13,26 +12,17 @@ if (!secretKey) {
   throw new Error("SECRET_KEY is not defined. Make sure it's set in the environment variables.");
 }
 
-// Middleware để phục vụ các file tĩnh trong thư mục public
-app.use(express.static(path.join(__dirname, 'public')));
+// Khởi tạo Firebase Admin SDK
+const serviceAccount = require('./firebase-service-account.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
-// Đường dẫn đến file keys.json
-const keysFilePath = path.join(__dirname, 'keys.json');
-let keys = [];
-
-// Đọc dữ liệu hiện có từ file JSON
-if (fs.existsSync(keysFilePath)) {
-  try {
-    const fileContent = fs.readFileSync(keysFilePath, 'utf8');
-    keys = fileContent ? JSON.parse(fileContent) : []; // Kiểm tra nếu nội dung trống
-  } catch (error) {
-    console.error('Error parsing JSON:', error);
-    keys = []; // Gán keys là một mảng trống nếu gặp lỗi
-  }
-}
+const db = admin.firestore();
+const keysCollection = db.collection('keys');
 
 // Endpoint để tạo key JWT
-app.get('/generate-key', (req, res) => {
+app.get('/generate-key', async (req, res) => {
   const { year, month, day, hour, minute } = req.query;
 
   // Lấy thời gian hiện tại
@@ -54,12 +44,9 @@ app.get('/generate-key', (req, res) => {
     // Định dạng lại thời gian hết hạn
     const formattedExpiration = expiration.toLocaleString();
 
-    // Lưu key và thời gian hết hạn vào file JSON
+    // Lưu key và thời gian hết hạn vào Firestore
     const keyData = { token, expiresAt: formattedExpiration };
-    keys.push(keyData);
-
-    // Ghi dữ liệu mới vào file JSON
-    fs.writeFileSync(keysFilePath, JSON.stringify(keys, null, 2));
+    await keysCollection.add(keyData);
 
     res.json(keyData);
   } catch (error) {
