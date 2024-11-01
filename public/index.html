@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>JWT Key Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .output {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>JWT Key Generator</h2>
+        <label for="year">Year:</label>
+        <input type="number" id="year" placeholder="Enter year">
+        <label for="month">Month:</label>
+        <input type="number" id="month" placeholder="Enter month">
+        <label for="day">Day:</label>
+        <input type="number" id="day" placeholder="Enter day">
+        <label for="hour">Hour:</label>
+        <input type="number" id="hour" placeholder="Enter hour">
+        <label for="minute">Minute:</label>
+        <input type="number" id="minute" placeholder="Enter minute">
+        <button onclick="generateKey()">Generate Key</button>
+
+        <div class="output" id="output"></div>
+    </div>
+
+    <script>
+        function generateKey() {
+            const year = document.getElementById('year').value;
+            const month = document.getElementById('month').value;
+            const day = document.getElementById('day').value;
+            const hour = document.getElementById('hour').value;
+            const minute = document.getElementById('minute').value;
+
+            fetch(`/generate-key?year=${year}&month=${month}&day=${day}&hour=${hour}&minute=${minute}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('output').innerHTML = `
+            <strong>Token:</strong> ${data.token}<br>
+            <strong>Expires At:</strong> ${data.expiresAt}
+          `;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+</body>
+
+</html>
