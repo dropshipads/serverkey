@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
-const path = require('path');
+const moment = require('moment-timezone'); // Thêm moment-timezone
 require('dotenv').config(); // Nạp biến môi trường từ file .env
 
 const app = express();
@@ -35,33 +35,34 @@ const keysCollection = db.collection('keys');
 // Phục vụ các file tĩnh trong thư mục 'public'
 app.use(express.static('public'));
 
-// Endpoint để phục vụ index.html tại đường dẫn gốc
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 // Endpoint để tạo key JWT
 app.get('/generate-key', async (req, res) => {
   const { year, month, day, hour, minute } = req.query;
 
-  // Lấy thời gian hiện tại
-  const now = new Date();
+  // Lấy thời gian hiện tại và chuyển đổi sang múi giờ +7
+  const now = moment().tz('Asia/Ho_Chi_Minh');
 
-  // Tạo thời gian hết hạn với giá trị mặc định nếu không được cung cấp
-  const expiration = new Date(
-    year ? parseInt(year) : now.getFullYear(),
-    month ? parseInt(month) - 1 : now.getMonth(),
-    day ? parseInt(day) : now.getDate(),
-    hour ? parseInt(hour) : now.getHours(),
-    minute ? parseInt(minute) : now.getMinutes()
+  // Tạo thời gian hết hạn dựa trên múi giờ +7
+  const expiration = moment.tz(
+    {
+      year: year ? parseInt(year) : now.year(),
+      month: month ? parseInt(month) - 1 : now.month(),
+      day: day ? parseInt(day) : now.date(),
+      hour: hour ? parseInt(hour) : now.hour(),
+      minute: minute ? parseInt(minute) : now.minute()
+    },
+    'Asia/Ho_Chi_Minh'
   );
 
   try {
-    // Tạo token JWT
-    const token = jwt.sign({ exp: Math.floor(expiration.getTime() / 1000) }, secretKey);
+    // Tạo token JWT với thời gian hết hạn (dạng timestamp giây)
+    const token = jwt.sign(
+      { exp: Math.floor(expiration.toDate().getTime() / 1000) },
+      secretKey
+    );
 
     // Định dạng lại thời gian hết hạn
-    const formattedExpiration = expiration.toLocaleString();
+    const formattedExpiration = expiration.format('YYYY-MM-DD HH:mm:ss');
 
     // Lưu key và thời gian hết hạn vào Firestore
     const keyData = { token, expiresAt: formattedExpiration };
