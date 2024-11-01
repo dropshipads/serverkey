@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
+const path = require('path');
 require('dotenv').config(); // Nạp biến môi trường từ file .env
 
 const app = express();
@@ -33,6 +34,11 @@ const keysCollection = db.collection('keys');
 
 // Phục vụ các file tĩnh trong thư mục 'public'
 app.use(express.static('public'));
+
+// Endpoint để phục vụ index.html tại đường dẫn gốc
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Endpoint để tạo key JWT
 app.get('/generate-key', async (req, res) => {
