@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
 const moment = require('moment-timezone'); // Thêm moment-timezone
 require('dotenv').config(); // Nạp biến môi trường từ file .env
+const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3000;
