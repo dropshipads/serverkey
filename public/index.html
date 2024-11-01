@@ -69,17 +69,24 @@
             const minute = document.getElementById('minute').value;
 
             fetch(`/generate-key?year=${year}&month=${month}&day=${day}&hour=${hour}&minute=${minute}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     document.getElementById('output').innerHTML = `
-            <strong>Token:</strong> ${data.token}<br>
-            <strong>Expires At:</strong> ${data.expiresAt}
-          `;
+        <strong>Token:</strong> ${data.token}<br>
+        <strong>Expires At:</strong> ${data.expiresAt}
+      `;
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    document.getElementById('output').innerHTML = `Error: ${error.message}`;
                 });
         }
+
     </script>
 </body>
 
