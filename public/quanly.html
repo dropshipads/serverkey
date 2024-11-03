@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        input,
+        button,
+        pre {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 1rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        pre {
+            background-color: #333;
+            color: #eee;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .action-buttons button {
+            background-color: #007BFF;
+        }
+
+        .action-buttons button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Token Management</h2>
+    <input type="text" id="tokenInput" placeholder="Nhập token" />
+
+    <div class="action-buttons">
+        <button onclick="revokeToken()">Revoke Token</button>
+        <button onclick="activateToken()">Activate Token</button>
+    </div>
+
+    <pre id="response">Phản hồi sẽ hiển thị ở đây...</pre>
+
+    <script>
+        async function revokeToken() {
+            const token = document.getElementById("tokenInput").value;
+            const responseElement = document.getElementById("response");
+
+            if (!token) {
+                responseElement.textContent = "Vui lòng nhập token!";
+                return;
+            }
+
+            try {
+                const response = await fetch(`/revoke-key`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token })
+                });
+
+                if (!response.ok) {
+                    responseElement.textContent = `Lỗi server: ${response.status} - ${response.statusText}`;
+                    return;
+                }
+
+                const result = await response.json();
+                responseElement.textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Lỗi: ${error.message}`;
+            }
+        }
+
+        async function activateToken() {
+            const token = document.getElementById("tokenInput").value;
+            const responseElement = document.getElementById("response");
+
+            if (!token) {
+                responseElement.textContent = "Vui lòng nhập token!";
+                return;
+            }
+
+            try {
+                const response = await fetch(`/activate-key`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token })
+                });
+
+                if (!response.ok) {
+                    responseElement.textContent = `Lỗi server: ${response.status} - ${response.statusText}`;
+                    return;
+                }
+
+                const result = await response.json();
+                responseElement.textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Lỗi: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+
+</html>
