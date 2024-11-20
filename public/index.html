@@ -159,7 +159,7 @@
         function validateKey() {
             const tokenInput = document.getElementById('token').value;
 
-            fetch(`/validate-key?token=${encodeURIComponent(tokenInput)}`, {
+            fetch(`/check-key?token=${encodeURIComponent(tokenInput)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
                 .then(response => {
