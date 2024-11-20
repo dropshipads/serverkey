@@ -123,16 +123,17 @@
                 })
                 .then(data => {
                     if (data.token) {
-                        // Xử lý thành công
-                        document.getElementById("loginResponse").textContent = "Login successful!";
+                        token = data.token; // Lưu token
+                        document.getElementById("loginOutput").textContent = "Login successful!";
                     } else {
-                        document.getElementById("loginResponse").textContent = "Login failed!";
+                        document.getElementById("loginOutput").textContent = "Login failed!";
                     }
                 })
                 .catch(error => {
-                    document.getElementById("loginResponse").textContent = `Error: ${error.message}`;
+                    document.getElementById("loginOutput").textContent = `Error: ${error.message}`;
                 });
         }
+
 
 
         // Generate Key function
