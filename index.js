@@ -34,6 +34,8 @@ admin.initializeApp({
 
 const db = admin.firestore();
 const keysCollection = db.collection("keys");
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 app.use(express.json());
 // Phục vụ các file tĩnh trong thư mục 'public'
@@ -49,40 +51,35 @@ app.get("/check", (req, res) => {
 });
 // Endpoint để tạo token JWT
 app.get("/generate-key", async (req, res) => {
-  const { year, month, day, hour, minute } = req.query;
-
-  // Lấy thời gian hiện tại theo múi giờ Asia/Ho_Chi_Minh
+  const days = parseInt(req.query.days || 30, 10);
   const now = DateTime.now().setZone("Asia/Ho_Chi_Minh");
-
-  // Tạo thời gian hết hạn dựa trên đầu vào hoặc thời gian hiện tại
-  const expiration = DateTime.fromObject(
-    {
-      year: year ? parseInt(year) : now.year,
-      month: month ? parseInt(month) : now.month,
-      day: day ? parseInt(day) : now.day,
-      hour: hour ? parseInt(hour) : now.hour,
-      minute: minute ? parseInt(minute) : now.minute,
-    },
-    { zone: "Asia/Ho_Chi_Minh" }
-  );
+  const expiration = now.plus({ days });
 
   try {
-    // Tạo token JWT với thời gian hết hạn (tính bằng giây)
     const token = jwt.sign(
-      { exp: Math.floor(expiration.toSeconds()) }, // Chuyển đổi thời gian hết hạn sang timestamp giây
+      { exp: Math.floor(expiration.toSeconds()) },
       secretKey
     );
 
-    // Định dạng lại thời gian hết hạn thành chuỗi dễ đọc
     const formattedExpiration = expiration.toFormat("yyyy-MM-dd HH:mm:ss");
 
-    // Lưu token và thời gian hết hạn vào Firestore
     const keyData = {
       token,
       expiresAt: formattedExpiration,
       active: true,
     };
     await keysCollection.add(keyData);
+
+    // Gửi thông báo đến Telegram
+    const message = `🔑 **New Key Added**\n\n- Token: ${token}\n- Expires At: ${formattedExpiration}\n- Added By: ${req.ip}`;
+    await axios.post(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: "Markdown", // Định dạng thông báo
+      }
+    );
 
     res.json(keyData);
   } catch (error) {
@@ -91,6 +88,7 @@ app.get("/generate-key", async (req, res) => {
       .json({ message: "Internal Server Error", error: error.message });
   }
 });
+
 // Endpoint để kiểm tra tính hợp lệ của token
 app.get("/validate-key", async (req, res) => {
   const { token } = req.query;
@@ -100,7 +98,12 @@ app.get("/validate-key", async (req, res) => {
   }
 
   try {
-    jwt.verify(token, secretKey); // Xác minh chữ ký của token
+    const decoded = jwt.verify(token, secretKey); // Xác minh chữ ký của token
+    const now = DateTime.now().toSeconds();
+
+    if (decoded.exp < now) {
+      return res.json({ valid: false, message: "Token has expired" });
+    }
 
     // Kiểm tra trạng thái token trong Firestore
     const snapshot = await keysCollection.where("token", "==", token).get();
