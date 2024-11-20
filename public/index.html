@@ -105,7 +105,6 @@
     <script>
         let token = null;
 
-        // Login function
         function login() {
             const username = document.getElementById("username").value;
             const password = document.getElementById("password").value;
@@ -125,6 +124,8 @@
                     if (data.token) {
                         token = data.token; // Lưu token
                         document.getElementById("loginOutput").textContent = "Login successful!";
+                        document.getElementById("loginSection").style.display = "none";
+                        document.getElementById("keySection").style.display = "block";
                     } else {
                         document.getElementById("loginOutput").textContent = "Login failed!";
                     }
@@ -134,9 +135,6 @@
                 });
         }
 
-
-
-        // Generate Key function
         function generateKey() {
             const days = document.getElementById('days').value || 30;
 
@@ -149,20 +147,19 @@
                 })
                 .then(data => {
                     document.getElementById('output').innerHTML = `
-                    <strong>Token:</strong> ${data.token}<br>
-                    <strong>Expires At:</strong> ${data.expiresAt}
-                `;
+                        <strong>Token:</strong> ${data.token}<br>
+                        <strong>Expires At:</strong> ${data.expiresAt}
+                    `;
                 })
                 .catch(error => {
                     document.getElementById('output').textContent = `Error: ${error.message}`;
                 });
         }
 
-        // Validate Key function
         function validateKey() {
             const tokenInput = document.getElementById('token').value;
 
-            fetch(`/check-key?token=${encodeURIComponent(tokenInput)}`, {
+            fetch(`/validate-key?token=${encodeURIComponent(tokenInput)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
                 .then(response => {
@@ -171,9 +168,9 @@
                 })
                 .then(data => {
                     document.getElementById('output').innerHTML = `
-                    <strong>Valid:</strong> ${data.valid}<br>
-                    <strong>Message:</strong> ${data.message}
-                `;
+                        <strong>Valid:</strong> ${data.valid}<br>
+                        <strong>Message:</strong> ${data.message}
+                    `;
                 })
                 .catch(error => {
                     document.getElementById('output').textContent = `Error: ${error.message}`;
