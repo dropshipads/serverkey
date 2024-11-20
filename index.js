@@ -1,4 +1,5 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
 const axios = require("axios"); // Import thư viện axios để gọi API
@@ -50,7 +51,7 @@ app.use((req, res, next) => {
     req.connection.remoteAddress ||
     req.ip;
   req.clientIp = clientIp; // Lưu IP vào request để dùng sau
-  // console.log("Client IP:", clientIp);
+  console.log("Client IP:", clientIp);
   next();
 });
 
@@ -69,6 +70,17 @@ function authenticateToken(req, res, next) {
   }
 }
 
+// Rate Limiting Middleware
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 phút
+  max: 10, // Tối đa 10 lần đăng nhập trong 15 phút
+  message: {
+    message: "Too many login attempts, please try again.",
+  },
+  standardHeaders: true, // Gửi thông tin rate limit trong headers
+  legacyHeaders: false, // Ẩn headers X-RateLimit-* cũ
+});
+
 app.use(express.json());
 // Phục vụ các file tĩnh trong thư mục 'public'
 app.use(express.static("public"));
@@ -83,7 +95,7 @@ app.get("/check", (req, res) => {
 });
 
 // Login endpoint
-app.post("/login", (req, res) => {
+app.post("/login", loginRateLimiter, (req, res) => {
   try {
     const { username, password } = req.body; // Lấy dữ liệu từ request body
 
