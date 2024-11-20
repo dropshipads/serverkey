@@ -107,8 +107,8 @@
 
         // Login function
         function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
 
             fetch('/login', {
                 method: 'POST',
@@ -116,21 +116,24 @@
                 body: JSON.stringify({ username, password })
             })
                 .then(response => {
-                    if (!response.ok) throw new Error('Login failed');
+                    if (response.status === 429) {
+                        throw new Error("Too many login attempts. Please try again later.");
+                    }
                     return response.json();
                 })
                 .then(data => {
                     if (data.token) {
-                        token = data.token;
-                        document.getElementById('loginOutput').textContent = "Login successful!";
-                        document.getElementById('loginSection').style.display = "none";
-                        document.getElementById('keySection').style.display = "block";
+                        // Xử lý thành công
+                        document.getElementById("loginResponse").textContent = "Login successful!";
+                    } else {
+                        document.getElementById("loginResponse").textContent = "Login failed!";
                     }
                 })
                 .catch(error => {
-                    document.getElementById('loginOutput').textContent = `Error: ${error.message}`;
+                    document.getElementById("loginResponse").textContent = `Error: ${error.message}`;
                 });
         }
+
 
         // Generate Key function
         function generateKey() {
