@@ -1,29 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>JWT Key Generator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT Login & Key Management</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f2f5;
             margin: 0;
-            padding: 0;
+            padding: 20px;
         }
 
         .container {
             max-width: 600px;
-            margin: 50px auto;
+            margin: auto;
+            background: #fff;
             padding: 20px;
-            background-color: #fff;
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         h2 {
-            color: #333;
             text-align: center;
-            margin-bottom: 20px;
+            color: #333;
         }
 
         label {
@@ -35,16 +36,10 @@
         input {
             width: 100%;
             padding: 10px;
-            margin: 5px 0;
+            margin: 5px 0 15px;
             border: 1px solid #ccc;
             border-radius: 5px;
             box-sizing: border-box;
-            transition: border-color 0.3s;
-        }
-
-        input:focus {
-            border-color: #007BFF;
-            outline: none;
         }
 
         button {
@@ -54,10 +49,9 @@
             color: white;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
             font-size: 1rem;
+            cursor: pointer;
             margin-top: 10px;
-            transition: background-color 0.3s;
         }
 
         button:hover {
@@ -72,86 +66,113 @@
             border-radius: 5px;
             font-family: monospace;
             word-wrap: break-word;
-            /* Cho phép xuống dòng */
-            overflow-wrap: break-word;
-            /* Tương thích thêm với các trình duyệt */
             white-space: pre-wrap;
-            /* Tự động xuống dòng khi nội dung quá dài */
-            max-width: 100%;
-            /* Đảm bảo không bị tràn container */
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                margin: 20px;
-                padding: 15px;
-            }
-
-            button {
-                font-size: 0.9rem;
-            }
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h2>JWT Key Generator</h2>
-        <label for="days">Days:</label>
-        <input type="number" id="days" placeholder="Enter number of days (default: 30)" value="30">
-        <button onclick="generateKey()">Generate Key</button>
+        <h2>JWT Login & Key Management</h2>
 
+        <!-- Login Section -->
+        <div id="loginSection">
+            <h3>Login</h3>
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="Enter username">
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter password">
+            <button onclick="login()">Login</button>
+            <div class="output" id="loginOutput"></div>
+        </div>
 
-        <h2>Validate Key</h2>
-        <label for="token">Token:</label>
-        <input type="text" id="token" placeholder="Enter token">
-        <button onclick="validateKey()">Validate Key</button>
+        <!-- Key Management Section -->
+        <div id="keySection" style="display: none;">
+            <h3>Generate Key</h3>
+            <label for="days">Number of Days (Default: 30):</label>
+            <input type="number" id="days" value="30">
+            <button onclick="generateKey()">Generate Key</button>
 
-        <div class="output" id="output"></div>
+            <h3>Validate Key</h3>
+            <label for="token">Token:</label>
+            <input type="text" id="token" placeholder="Enter token">
+            <button onclick="validateKey()">Validate Key</button>
+
+            <div class="output" id="output"></div>
+        </div>
     </div>
 
     <script>
+        let token = null;
 
-        function generateKey() {
-            const days = document.getElementById('days').value || 30; // Mặc định 30 ngày nếu không nhập
+        // Login function
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-            fetch(`/generate-key?days=${days}`)
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error('Login failed');
                     return response.json();
                 })
                 .then(data => {
-                    document.getElementById('output').innerHTML = `
-                <strong>Token:</strong> ${data.token}<br>
-                <strong>Expires At:</strong> ${data.expiresAt}
-            `;
+                    if (data.token) {
+                        token = data.token;
+                        document.getElementById('loginOutput').textContent = "Login successful!";
+                        document.getElementById('loginSection').style.display = "none";
+                        document.getElementById('keySection').style.display = "block";
+                    }
                 })
                 .catch(error => {
-                    document.getElementById('output').innerHTML = `Error: ${error.message}`;
+                    document.getElementById('loginOutput').textContent = `Error: ${error.message}`;
                 });
         }
 
+        // Generate Key function
+        function generateKey() {
+            const days = document.getElementById('days').value || 30;
 
-        function validateKey() {
-            const token = document.getElementById('token').value;
-
-            fetch(`/validate-key?token=${encodeURIComponent(token)}`)
+            fetch(`/generate-key?days=${days}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error('Error generating key');
                     return response.json();
                 })
                 .then(data => {
                     document.getElementById('output').innerHTML = `
-            <strong>Valid:</strong> ${data.valid}<br>
-            <strong>Message:</strong> ${data.message}
-          `;
+                    <strong>Token:</strong> ${data.token}<br>
+                    <strong>Expires At:</strong> ${data.expiresAt}
+                `;
                 })
                 .catch(error => {
-                    document.getElementById('output').innerHTML = `Error: ${error.message}`;
+                    document.getElementById('output').textContent = `Error: ${error.message}`;
+                });
+        }
+
+        // Validate Key function
+        function validateKey() {
+            const tokenInput = document.getElementById('token').value;
+
+            fetch(`/check-key?token=${encodeURIComponent(tokenInput)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Error validating key');
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('output').innerHTML = `
+                    <strong>Valid:</strong> ${data.valid}<br>
+                    <strong>Message:</strong> ${data.message}
+                `;
+                })
+                .catch(error => {
+                    document.getElementById('output').textContent = `Error: ${error.message}`;
                 });
         }
     </script>

@@ -35,7 +35,7 @@
         button {
             padding: 10px;
             font-size: 1rem;
-            background-color: #4CAF50;
+            background-color: #007BFF;
             color: white;
             border: none;
             border-radius: 5px;
@@ -43,7 +43,7 @@
         }
 
         button:hover {
-            background-color: #45a049;
+            background-color: #0056b3;
         }
 
         pre {
@@ -59,85 +59,115 @@
         }
 
         .action-buttons button {
-            background-color: #007BFF;
+            background-color: #4CAF50;
         }
 
         .action-buttons button:hover {
-            background-color: #0056b3;
+            background-color: #45a049;
         }
     </style>
 </head>
 
 <body>
-    <h2>Token Management</h2>
-    <input type="text" id="tokenInput" placeholder="Nhập token" />
-
-    <div class="action-buttons">
-        <button onclick="revokeToken()">Revoke Token</button>
-        <button onclick="activateToken()">Activate Token</button>
+    <div id="loginSection">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <pre id="loginResponse"></pre>
     </div>
 
-    <pre id="response">Phản hồi sẽ hiển thị ở đây...</pre>
+    <div id="tokenManagementSection" style="display: none;">
+        <h2>Token Management</h2>
+        <input type="text" id="tokenInput" placeholder="Enter token">
+
+        <div class="action-buttons">
+            <button onclick="revokeToken()">Revoke Token</button>
+            <button onclick="activateToken()">Activate Token</button>
+        </div>
+
+        <pre id="response"></pre>
+    </div>
 
     <script>
-        async function revokeToken() {
-            const token = document.getElementById("tokenInput").value;
-            const responseElement = document.getElementById("response");
+        let token = null;
 
-            if (!token) {
-                responseElement.textContent = "Vui lòng nhập token!";
-                return;
-            }
+        // Login function
+        function login() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
 
-            try {
-                const response = await fetch(`/revoke-key`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ token })
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.token) {
+                        token = data.token; // Lưu token
+                        document.getElementById("loginResponse").textContent = "Login successful!";
+                        document.getElementById("loginSection").style.display = "none"; // Ẩn phần login
+                        document.getElementById("tokenManagementSection").style.display = "block"; // Hiện phần quản lý token
+                    } else {
+                        document.getElementById("loginResponse").textContent = "Login failed!";
+                    }
+                })
+                .catch(error => {
+                    document.getElementById("loginResponse").textContent = `Error: ${error.message}`;
                 });
-
-                if (!response.ok) {
-                    responseElement.textContent = `Lỗi server: ${response.status} - ${response.statusText}`;
-                    return;
-                }
-
-                const result = await response.json();
-                responseElement.textContent = JSON.stringify(result, null, 2);
-            } catch (error) {
-                responseElement.textContent = `Lỗi: ${error.message}`;
-            }
         }
 
-        async function activateToken() {
-            const token = document.getElementById("tokenInput").value;
-            const responseElement = document.getElementById("response");
+        // Revoke Token function
+        function revokeToken() {
+            const tokenInput = document.getElementById("tokenInput").value;
 
             if (!token) {
-                responseElement.textContent = "Vui lòng nhập token!";
+                document.getElementById("response").textContent = "You must log in first!";
                 return;
             }
 
-            try {
-                const response = await fetch(`/activate-key`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ token })
+            fetch('/revoke-key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ token: tokenInput })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("response").textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    document.getElementById("response").textContent = `Error: ${error.message}`;
                 });
+        }
 
-                if (!response.ok) {
-                    responseElement.textContent = `Lỗi server: ${response.status} - ${response.statusText}`;
-                    return;
-                }
+        // Activate Token function
+        function activateToken() {
+            const tokenInput = document.getElementById("tokenInput").value;
 
-                const result = await response.json();
-                responseElement.textContent = JSON.stringify(result, null, 2);
-            } catch (error) {
-                responseElement.textContent = `Lỗi: ${error.message}`;
+            if (!token) {
+                document.getElementById("response").textContent = "You must log in first!";
+                return;
             }
+
+            fetch('/activate-key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ token: tokenInput })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("response").textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    document.getElementById("response").textContent = `Error: ${error.message}`;
+                });
         }
     </script>
 </body>

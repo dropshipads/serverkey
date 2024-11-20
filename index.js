@@ -36,6 +36,9 @@ const db = admin.firestore();
 const keysCollection = db.collection("keys");
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+// Lấy username và password từ .env
+const adminUsername = process.env.ADMIN_USERNAME;
+const adminPassword = process.env.ADMIN_PASSWORD;
 
 // Thiết lập để lấy IP chính xác
 app.set("trust proxy", true);
@@ -47,9 +50,24 @@ app.use((req, res, next) => {
     req.connection.remoteAddress ||
     req.ip;
   req.clientIp = clientIp; // Lưu IP vào request để dùng sau
-  console.log("Client IP:", clientIp);
+  // console.log("Client IP:", clientIp);
   next();
 });
+
+// Middleware to authenticate JWT
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.status(401).json({ message: "Token is required" });
+
+  try {
+    const user = jwt.verify(token, secretKey);
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
+}
 
 app.use(express.json());
 // Phục vụ các file tĩnh trong thư mục 'public'
@@ -63,8 +81,28 @@ app.get("/", (req, res) => {
 app.get("/check", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "quanly.html"));
 });
+
+// Login endpoint
+app.post("/login", (req, res) => {
+  try {
+    const { username, password } = req.body; // Lấy dữ liệu từ request body
+
+    if (username === adminUsername && password === adminPassword) {
+      const token = jwt.sign({ username }, secretKey, { expiresIn: "1h" });
+      return res.json({ token });
+    }
+
+    res.status(401).json({ message: "Invalid username or password" });
+  } catch (error) {
+    console.error("Error in /login:", error.message); // Log lỗi ra console
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+});
+
 // Endpoint để tạo token JWT
-app.get("/generate-key", async (req, res) => {
+app.get("/generate-key", authenticateToken, async (req, res) => {
   const days = parseInt(req.query.days || 30, 10);
   const now = DateTime.now().setZone("Asia/Ho_Chi_Minh");
   const expiration = now.plus({ days });
@@ -104,6 +142,45 @@ app.get("/generate-key", async (req, res) => {
 });
 
 // Endpoint để kiểm tra tính hợp lệ của token
+app.get("/check-key", authenticateToken, async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return res.status(400).json({ valid: false, message: "Token is required" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, secretKey); // Xác minh chữ ký của token
+    const now = DateTime.now().toSeconds();
+
+    if (decoded.exp < now) {
+      return res.json({ valid: false, message: "Token has expired" });
+    }
+
+    // Kiểm tra trạng thái token trong Firestore
+    const snapshot = await keysCollection.where("token", "==", token).get();
+    if (snapshot.empty) {
+      return res.json({
+        valid: false,
+        message: "Token not found in Firestore",
+      });
+    }
+
+    const keyData = snapshot.docs[0].data();
+    if (!keyData.active) {
+      return res.json({
+        valid: false,
+        message: "Token is inactive or revoked",
+      });
+    }
+
+    res.json({ valid: true, message: "Token is valid" });
+  } catch (error) {
+    res.json({ valid: false, message: "Token is invalid or expired" });
+  }
+});
+
+// Endpoint check key
 app.get("/validate-key", async (req, res) => {
   const { token } = req.query;
 
@@ -142,7 +219,7 @@ app.get("/validate-key", async (req, res) => {
   }
 });
 
-app.post("/revoke-key", async (req, res) => {
+app.post("/revoke-key", authenticateToken, async (req, res) => {
   const { token } = req.body;
 
   try {
@@ -161,7 +238,7 @@ app.post("/revoke-key", async (req, res) => {
   }
 });
 
-app.post("/activate-key", async (req, res) => {
+app.post("/activate-key", authenticateToken, async (req, res) => {
   const { token } = req.body;
 
   try {
