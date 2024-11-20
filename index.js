@@ -37,6 +37,20 @@ const keysCollection = db.collection("keys");
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
+// Thiết lập để lấy IP chính xác
+app.set("trust proxy", true);
+
+// Middleware để ghi log IP client
+app.use((req, res, next) => {
+  const clientIp =
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.connection.remoteAddress ||
+    req.ip;
+  req.clientIp = clientIp; // Lưu IP vào request để dùng sau
+  console.log("Client IP:", clientIp);
+  next();
+});
+
 app.use(express.json());
 // Phục vụ các file tĩnh trong thư mục 'public'
 app.use(express.static("public"));
@@ -71,7 +85,7 @@ app.get("/generate-key", async (req, res) => {
     await keysCollection.add(keyData);
 
     // Gửi thông báo đến Telegram
-    const message = `🔑 **New Key Added**\n\n- Token: ${token}\n- Expires At: ${formattedExpiration}\n- Added By: ${req.ip}`;
+    const message = `🔑 **New Key Added**\n\n- **Token:** ${token}\n- **Expires At:** ${formattedExpiration}\n- **Added By IP:** ${req.clientIp}`;
     await axios.post(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
