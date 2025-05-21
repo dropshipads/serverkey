@@ -270,6 +270,19 @@ app.post("/activate-key", authenticateToken, async (req, res) => {
   }
 });
 
+app.get("/api/exchange-rate", async (req, res) => {
+  const base = (req.query.base || "VND").toUpperCase();
+  const apikey = "M81EmyxyvxRYAQ9TPVmaPby5Y9tHSM1A";
+
+  const url = `https://api.apilayer.com/exchangerates_data/latest?base=${base}&symbols=USD`;
+  const response = await fetch(url, {
+    headers: { apikey: apikey },
+  });
+
+  const data = await response.json();
+  res.json(data);
+});
+
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
