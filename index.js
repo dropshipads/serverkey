@@ -274,13 +274,18 @@ app.get("/api/exchange-rate", async (req, res) => {
   const base = (req.query.base || "VND").toUpperCase();
   const apikey = "M81EmyxyvxRYAQ9TPVmaPby5Y9tHSM1A";
 
-  const url = `https://api.apilayer.com/exchangerates_data/latest?base=${base}&symbols=USD`;
-  const response = await fetch(url, {
-    headers: { apikey: apikey },
-  });
+  try {
+    const url = `https://api.apilayer.com/exchangerates_data/latest?base=${base}&symbols=USD`;
+    const response = await axios.get(url, {
+      headers: { apikey: apikey },
+    });
 
-  const data = await response.json();
-  res.json(data);
+    const data = response.data;
+    res.json(data);
+  } catch (error) {
+    console.error("❌ Lỗi khi gọi API exchange rate:", error.message);
+    res.status(500).json({ error: "Lỗi lấy tỷ giá", message: error.message });
+  }
 });
 
 app.listen(port, () => {
