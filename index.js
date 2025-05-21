@@ -94,6 +94,10 @@ app.get("/check", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "quanly.html"));
 });
 
+app.get("/ads", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "ads.html"));
+});
+
 // Login endpoint
 app.post("/login", loginRateLimiter, (req, res) => {
   try {
@@ -267,24 +271,6 @@ app.post("/activate-key", authenticateToken, async (req, res) => {
     res.json({ message: "Token has been activated" });
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
-app.get("/api/exchange-rate", async (req, res) => {
-  const base = (req.query.base || "VND").toUpperCase();
-  const apikey = "M81EmyxyvxRYAQ9TPVmaPby5Y9tHSM1A";
-
-  try {
-    const url = `https://api.apilayer.com/exchangerates_data/latest?base=${base}&symbols=USD`;
-    const response = await axios.get(url, {
-      headers: { apikey: apikey },
-    });
-
-    const data = response.data;
-    res.json(data);
-  } catch (error) {
-    console.error("❌ Lỗi khi gọi API exchange rate:", error.message);
-    res.status(500).json({ error: "Lỗi lấy tỷ giá", message: error.message });
   }
 });
 

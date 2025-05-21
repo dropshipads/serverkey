@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Facebook Campaign JSON Table</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        input,
+        button {
+            margin-top: 10px;
+            padding: 5px;
+        }
+
+        .money {
+            font-weight: bold;
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>📊 Facebook Campaign Viewer</h2>
+
+    <label>Dán JSON:</label><br />
+    <textarea id="jsonInput" placeholder="Dán JSON ở đây..."></textarea><br />
+
+    <label>Nhập mã tiền tệ (ví dụ: USD, VND, JPY):</label>
+    <input type="text" id="currencyInput" placeholder="Nhập mã tiền tệ..." />
+
+    <button onclick="renderTable()">Hiển thị bảng</button>
+    <button onclick="convertToUSD()">Chuyển đổi sang USD 💱</button>
+
+    <div id="tableContainer"></div>
+
+    <script>
+        const currencyFactors = {
+            DZD: 100, ARS: 100, AUD: 100, BHD: 100, BDT: 100, BOB: 100, BGN: 100,
+            BRL: 100, GBP: 100, CAD: 100, CLP: 1, CNY: 100, COP: 1, CRC: 1,
+            HRK: 100, CZK: 100, DKK: 100, EGP: 100, EUR: 100, GTQ: 100, HNL: 100,
+            HKD: 100, HUF: 1, ISK: 1, INR: 100, IDR: 1, ILS: 100, JPY: 1, JOD: 100,
+            KES: 100, KRW: 1, LVL: 100, LTL: 100, MOP: 100, MYR: 100, MXN: 100,
+            NZD: 100, NIO: 100, NGN: 100, NOK: 100, PKR: 100, PYG: 1, PEN: 100,
+            PHP: 100, PLN: 100, QAR: 100, RON: 100, RUB: 100, SAR: 100, RSD: 100,
+            SGD: 100, SKK: 100, ZAR: 100, SEK: 100, CHF: 100, TWD: 1, THB: 100,
+            TRY: 100, AED: 100, UAH: 100, USD: 100, UYU: 100, VEF: 100, VND: 1,
+            FBZ: 100, VES: 100
+        };
+
+        function formatMoney(value, factor) {
+            if (!value || isNaN(value)) return '';
+            return '<span class="money">' + (parseInt(value) / factor).toLocaleString() + '</span>';
+        }
+
+        function formatTime(raw) {
+            if (!raw || typeof raw !== 'string') return '';
+            const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2})?([+-])(\d{2})(\d{2})$/);
+            if (!match) return raw;
+            const [, year, month, day, hour, minute, sign, h, m] = match;
+            const gmt = `GMT${sign}${parseInt(h, 10)}`;
+            return `${day}/${month}/${year} ${hour}:${minute} ${gmt}`;
+        }
+
+        function renderTable() {
+            const raw = document.getElementById('jsonInput').value;
+            const currencyCode = document.getElementById('currencyInput').value.trim().toUpperCase();
+            const factor = currencyFactors[currencyCode];
+            const container = document.getElementById('tableContainer');
+
+            if (!factor) {
+                container.innerHTML = `<p style="color:red;">❌ Mã tiền tệ không hợp lệ hoặc chưa được hỗ trợ: <b>${currencyCode}</b></p>`;
+                return;
+            }
+
+            try {
+                const json = JSON.parse(raw);
+                const rows = json.data || [];
+                if (!rows.length) {
+                    container.innerHTML = '<p>Không có dữ liệu trong mảng <code>data</code>.</p>';
+                    return;
+                }
+
+                let html = '<h3>Bảng chính: Tất cả campaign</h3>';
+                html += '<table><thead><tr>' +
+                    '<th>ID</th><th>Name</th><th>Status</th><th>Objective</th>' +
+                    '<th>Start Time</th><th>Stop Time</th><th>Daily Budget</th><th>Lifetime Budget</th><th>Created Time</th><th>Budget Remaining</th><th>Delivery Status</th>' +
+                    '</tr></thead><tbody>';
+
+                for (const item of rows) {
+                    html += '<tr>' +
+                        `<td>${item.id || ''}</td>` +
+                        `<td>${item.name || ''}</td>` +
+                        `<td>${item.status || ''}</td>` +
+                        `<td>${item.objective || ''}</td>` +
+                        `<td>${formatTime(item.start_time)}</td>` +
+                        `<td>${formatTime(item.stop_time)}</td>` +
+                        `<td>${formatMoney(item.daily_budget, factor)}</td>` +
+                        `<td>${formatMoney(item.lifetime_budget, factor)}</td>` +
+                        `<td>${formatTime(item.created_time)}</td>` +
+                        `<td>${formatMoney(item.budget_remaining, factor)}</td>` +
+                        `<td>${item.delivery_status?.status || ''}</td>` +
+                        '</tr>';
+                }
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+            } catch (e) {
+                container.innerHTML = '<p style="color: red;">❌ JSON không hợp lệ!</p>';
+            }
+        }
+
+
+        async function getExchangeRateToUSD(baseCurrency) {
+            const apiKey = "M81EmyxyvxRYAQ9TPVmaPby5Y9tHSM1A"; // Thay YOUR_API_KEY bằng API Key của bạn
+            const url = `https://api.apilayer.com/exchangerates_data/latest?base=${baseCurrency}&symbols=USD`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': apiKey
+                    }
+                });
+                const data = await response.json();
+
+                if (!data.success || !data.rates || !data.rates.USD) {
+                    throw new Error("Không lấy được tỉ giá từ API.");
+                }
+
+                return data.rates.USD;
+            } catch (error) {
+                console.error('Lỗi khi lấy tỉ giá:', error);
+                return 1; // Giá trị mặc định nếu có lỗi
+            }
+        }
+
+        async function convertToUSD() {
+            const raw = document.getElementById('jsonInput').value;
+            const currencyCode = document.getElementById('currencyInput').value.trim().toUpperCase();
+            const factor = currencyFactors[currencyCode];
+
+            if (!factor) {
+                alert("❌ Mã tiền tệ không hợp lệ hoặc chưa hỗ trợ.");
+                return;
+            }
+
+            const rate = await getExchangeRateToUSD(currencyCode);
+            try {
+                const json = JSON.parse(raw);
+                const rows = json.data || [];
+
+                for (const item of rows) {
+                    const fields = ["daily_budget", "lifetime_budget", "budget_remaining"];
+                    for (let field of fields) {
+                        if (item[field]) {
+                            const vnd = parseInt(item[field]) / factor;
+                            const usd = vnd * rate;
+                            item[field + "_usd"] = usd.toFixed(2);
+                        }
+                    }
+                }
+
+                renderTableWithUSD(rows);
+
+            } catch (err) {
+                alert("❌ JSON không hợp lệ.");
+            }
+        }
+
+        function renderTableWithUSD(rows) {
+            const container = document.getElementById('tableContainer');
+            let html = '<h3>Bảng đã chuyển sang USD 💵</h3>';
+            html += '<table><thead><tr>' +
+                '<th>ID</th><th>Name</th><th>Status</th><th>Objective</th>' +
+                '<th>Start Time</th><th>Stop Time</th>' +
+                '<th>Daily Budget (USD)</th><th>Lifetime Budget (USD)</th><th>Created Time</th><th>Budget Remaining (USD)</th><th>Delivery Status</th>' +
+                '</tr></thead><tbody>';
+
+            for (const item of rows) {
+                html += '<tr>' +
+                    `<td>${item.id || ''}</td>` +
+                    `<td>${item.name || ''}</td>` +
+                    `<td>${item.status || ''}</td>` +
+                    `<td>${item.objective || ''}</td>` +
+                    `<td>${formatTime(item.start_time)}</td>` +
+                    `<td>${formatTime(item.stop_time)}</td>` +
+                    `<td><span class="money">${formatNumber(item.daily_budget_usd)}</span></td>` +
+                    `<td><span class="money">${formatNumber(item.lifetime_budget_usd)}</span></td>` +
+                    `<td>${formatTime(item.created_time)}</td>` +
+                    `<td><span class="money">${formatNumber(item.budget_remaining_usd)}</span></td>` +
+                    `<td>${item.delivery_status?.status || ''}</td>` +
+                    '</tr>';
+            }
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function formatNumber(value) {
+            if (value === undefined || value === null || isNaN(value)) return '';
+            return parseFloat(value).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+    </script>
+</body>
+
+</html>
